@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (extras.classList.contains("collapsed")) {
+            expandcollapse.classList.add("expander")
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    sort_column(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+
+        if (key_a == key_b) return 0;
+
+        if (reversed) {
+            return (key_a < key_b ? 1 : -1);
+        } else {
+            return (key_a > key_b ? 1 : -1);
+        }
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 22-May-2020 at 11:39:32 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v2.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>JAVA_HOME</td>
+        <td>C:\Program Files (x86)\Java\jdk-14.0.1</td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.8.1", "pytest": "5.4.2"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.18362-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "2.1.1", "metadata": "1.9.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.7.0</td></tr></table>
+    <h2>Summary</h2>
+    <p>1 tests ran in 270.39 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">1 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">test_mainclass.py::Test_main::test_radiobutton[data_provide0]</td>
+          <td class="col-duration">193.88</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[&lt;selenium.webdriver.remote.webelement.WebElement (session=&quot;07a2ec6e4e81d40da053c5f312a9876f&quot;, element=&quot;add1ac76-1290-4fa6-82fc-7b91a81b4864&quot;)&gt;, &lt;selenium.webdriver.remote.webelement.WebElement (session=&quot;07a2ec6e4e81d40da053c5f312a9876f&quot;, element=&quot;36f0cbad-3e39-4215-a4ac-f4b0e625cc8f&quot;)&gt;, &lt;selenium.webdriver.remote.webelement.WebElement (session=&quot;07a2ec6e4e81d40da053c5f312a9876f&quot;, element=&quot;b30504c2-fc47-45dc-8ada-144e2e8df4f8&quot;)&gt;]
+British Indian Ocean Territory
+India
+Indonesia
+The value in the drop box value is Indonesia
+Option2
+child window title  QA Click Academy | Selenium,Jmeter,SoapUI,Appium,Database testing,QA Training Academy
+Parent window title Practice Page
+the name of the course containing selenium  [&#x27;Selenium Webdriver with Java Basics + Advanced + Interview Guide&#x27;, &#x27;Appium (Selenium) - Mobile Automation Testing from Scratch&#x27;, &#x27;Master Selenium Automation in simple Python Language&#x27;, &#x27;Advanced Selenium Framework Pageobject, TestNG, Maven, Jenkins,C&#x27;]
+number of course containing selenium are  4
+the entered name is  shivanand
+ the name other tab Rahul Shetty Academy
+the values in mouse  hover Top
+the values in mouse  hover Reload
+number of frames are  1
+number of links present 125
+https://linkedin.com/in/rahul-shetty-trainer/
+https://courses.rahulshettyacademy.com/sign_up
+https://courses.rahulshettyacademy.com/sign_in
+https://www.rahulshettyacademy.com/#/index
+https://www.rahulshettyacademy.com/#/index
+https://courses.rahulshettyacademy.com/courses
+https://www.rahulshettyacademy.com/#/mentorship
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/part-time-jobs
+http://www.qaclickacademy.com/blog/
+https://www.rahulshettyacademy.com/#/about-my-mission
+https://www.rahulshettyacademy.com/#/contact-us
+https://www.rahulshettyacademy.com/#/index
+https://www.rahulshettyacademy.com/#/index
+https://courses.rahulshettyacademy.com/courses
+https://www.rahulshettyacademy.com/#/mentorship
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/part-time-jobs
+http://www.qaclickacademy.com/blog/
+https://www.rahulshettyacademy.com/#/about-my-mission
+https://www.rahulshettyacademy.com/#/contact-us
+https://courses.rahulshettyacademy.com/sign_up
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+
+
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+
+
+https://www.rahulshettyacademy.com/#/part-time-jobs
+https://www.rahulshettyacademy.com/#/part-time-jobs
+https://www.rahulshettyacademy.com/#/part-time-jobs
+https://www.rahulshettyacademy.com/#/part-time-jobs
+
+
+https://www.rahulshettyacademy.com/#/mentorship
+
+
+https://www.rahulshettyacademy.com/#/practice-project
+
+
+https://www.rahulshettyacademy.com/#/consulting
+
+
+https://www.rahulshettyacademy.com/#/part-time-jobs
+
+
+https://www.rahulshettyacademy.com/#/mentorship
+https://www.rahulshettyacademy.com/#/mentorship
+https://www.rahulshettyacademy.com/#/mentorship
+https://www.rahulshettyacademy.com/#/mentorship
+
+
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+https://www.rahulshettyacademy.com/#/practice-project
+
+
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+https://www.rahulshettyacademy.com/#/consulting
+
+
+https://courses.rahulshettyacademy.com/p/core-java-for-automation-testers-interview-programs
+https://courses.rahulshettyacademy.com/p/core-java-for-automation-testers-interview-programs
+
+https://courses.rahulshettyacademy.com/p/seleniumwebdriverjavatraining
+https://courses.rahulshettyacademy.com/p/seleniumwebdriverjavatraining
+
+
+https://courses.rahulshettyacademy.com/p/learn-jmeter-from-scratch-performance-load-testing-tool-2015-06-28-08-33-24-0000
+https://courses.rahulshettyacademy.com/p/learn-jmeter-from-scratch-performance-load-testing-tool-2015-06-28-08-33-24-0000
+
+
+https://courses.rahulshettyacademy.com/p/learn-sql-in-practical-database-testing-from-scratch
+https://courses.rahulshettyacademy.com/p/learn-sql-in-practical-database-testing-from-scratch
+
+
+https://courses.rahulshettyacademy.com/p/mobile-automation-using-appiumselenium-3
+https://courses.rahulshettyacademy.com/p/mobile-automation-using-appiumselenium-3
+
+
+https://courses.rahulshettyacademy.com/p/webservices-testing-with-soap-ui
+https://courses.rahulshettyacademy.com/p/webservices-testing-with-soap-ui
+
+
+https://courses.rahulshettyacademy.com/p/learn-software-testing-in-practical-become-a-qa-expert
+https://courses.rahulshettyacademy.com/p/learn-software-testing-in-practical-become-a-qa-expert
+
+
+https://courses.rahulshettyacademy.com/p/learn-selenium-automation-in-easy-python-language
+https://courses.rahulshettyacademy.com/p/learn-selenium-automation-in-easy-python-language
+
+
+https://courses.rahulshettyacademy.com/p/rest-api-testing-automation-from-scratch-rest-assured-java
+https://courses.rahulshettyacademy.com/p/rest-api-testing-automation-from-scratch-rest-assured-java
+
+
+https://courses.rahulshettyacademy.com/p/learn-protractor-angular-automation-from-scratch-framework
+https://courses.rahulshettyacademy.com/p/learn-protractor-angular-automation-from-scratch-framework
+
+
+https://courses.rahulshettyacademy.com/p/cypress-modern-automation-testing-from-scratch-framework
+https://courses.rahulshettyacademy.com/p/cypress-modern-automation-testing-from-scratch-framework
+
+
+https://courses.rahulshettyacademy.com/p/sdet-test-architect-essentials-road-to-full-stack-qa
+https://courses.rahulshettyacademy.com/p/sdet-test-architect-essentials-road-to-full-stack-qa
+
+
+https://courses.rahulshettyacademy.com/courses
+https://courses.rahulshettyacademy.com/sign_up
+https://www.rahulshettyacademy.com/#
+https://www.rahulshettyacademy.com/#/about-my-mission
+https://www.rahulshettyacademy.com/#/contact-us
+https://www.rahulshettyacademy.com/#/privacy
+<br/> -------------------------------Captured log call-------------------------------- <br/>[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:14 test started
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:16 Testing for Radio button
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:21 Radio button is clicked
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:26 Testing suggestion box
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:41 Indonesia is selected
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:53 option2 is selected
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:66 Checkbox2 is selected
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:71 Checkbox 3 is selected
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:77 Test for alert button
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:86 Name in alert button is asserted
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:99 Name in alert box after clicking cancel button is asserted
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:105 Test for window handles
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:118 Fetching Selenium name from the list
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:135 visible text is displayed after hide button
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:143 visible text is displayed after show button
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:170 Test for iframes
+[32mINFO    [0m Assignment_six.BaseTest:test_mainclass.py:189 End of test<br/></div></td></tr></tbody></table></body></html>

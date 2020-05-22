@@ -1,0 +1,21 @@
+PageObject : INFO: 22-May-20 11:35:03 Locators from Pageobject
+test_mainclass : INFO: 22-May-20 11:36:10 test started
+test_mainclass : INFO: 22-May-20 11:36:10 Testing for Radio button
+test_mainclass : INFO: 22-May-20 11:36:16 Radio button is clicked
+test_mainclass : INFO: 22-May-20 11:36:16 Testing suggestion box
+test_mainclass : INFO: 22-May-20 11:36:24 Indonesia is selected
+test_mainclass : INFO: 22-May-20 11:36:27 option2 is selected
+test_mainclass : INFO: 22-May-20 11:36:30 Checkbox2 is selected
+test_mainclass : INFO: 22-May-20 11:36:30 Checkbox 3 is selected
+test_mainclass : INFO: 22-May-20 11:36:30 Test for alert button
+test_mainclass : INFO: 22-May-20 11:36:35 Name in alert button is asserted
+test_mainclass : INFO: 22-May-20 11:36:39 Name in alert box after clicking cancel button is asserted
+test_mainclass : INFO: 22-May-20 11:36:39 Test for window handles
+test_mainclass : INFO: 22-May-20 11:37:53 Fetching Selenium name from the list
+test_mainclass : INFO: 22-May-20 11:38:19 visible text is displayed after hide button
+test_mainclass : INFO: 22-May-20 11:38:21 visible text is displayed after show button
+test_mainclass : INFO: 22-May-20 11:38:40 Test for iframes
+test_mainclass : INFO: 22-May-20 11:39:00 End of test
+connectionpool : WARNING: 22-May-20 11:39:26 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0416B410>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/07a2ec6e4e81d40da053c5f312a9876f
+connectionpool : WARNING: 22-May-20 11:39:28 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x041AEE50>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/07a2ec6e4e81d40da053c5f312a9876f
+connectionpool : WARNING: 22-May-20 11:39:30 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x041AEED0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/07a2ec6e4e81d40da053c5f312a9876f
